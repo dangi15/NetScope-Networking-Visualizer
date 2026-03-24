@@ -46,8 +46,8 @@ vector<int> BFS(int src, int dest, map<int, vector<pair<int, int>>>& graph) {
 		path.push_back(v);
 
 	reverse(path.begin(), path.end());
-	for (int i : path) cout << i << ' ';
-	cout << endl;
+	//for (int i : path) cout << i << ' ';
+	//cout << endl;
 	return path;
 }
 
@@ -84,8 +84,8 @@ vector<int> Dijkstra(map<int, vector<pair<int, int>>>& graph, int src, int dest)
 	for (int v = dest; v != -1; v = parent[v])
 		path.push_back(v);
 	reverse(path.begin(), path.end());
-	for (int i : path) cout << i << ' ';
-	cout << endl;
+	//for (int i : path) cout << i << ' ';
+	//cout << endl;
 	return path;
 }
 
