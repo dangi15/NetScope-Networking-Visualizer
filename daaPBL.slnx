@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="daaPBL.vcxproj" Id="8abd7800-ec02-4877-ba84-3be82a52707c" />
+</Solution>
