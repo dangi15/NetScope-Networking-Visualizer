@@ -1,324 +1,174 @@
 #define _USE_MATH_DEFINES
 #include <iostream>
-#include <cmath>
-#include <queue>
-#include <climits>
 #include <optional>
-#include <algorithm>
-#include <set>
 #include <map>
+#include <vector>
 #include <SFML/Graphics.hpp>
-#include <SFML/System.hpp>
-#include <SFML/Window.hpp>
-#include <SFML/Audio.hpp>
-#include <SFML/Network.hpp>
+
+#include "Graph.h"
+#include "Algorithms.h"
+#include "Node.h"
+#include "Renderer.h"
+
 using namespace std;
 
-vector<int> BFS(int src, int dest, map<int, vector<pair<int, int>>>& graph) {
-
-	map<int, int> parent;
-	map<int, bool> visited;
-
-	queue<int> q;
-	q.push(src);
-	visited[src] = true;
-	parent[src] = -1;
-
-	while (!q.empty()) {
-		int u = q.front();
-		q.pop();
-
-		if (u == dest) break;
-
-		for (auto& [v, w] : graph[u]) {
-			if (!visited[v]) {
-				visited[v] = true;
-				parent[v] = u;
-				q.push(v);
-			}
-		}
-	}
-
-	if (!visited[dest]) return {};
-
-	vector<int> path;
-	for (int v = dest; v != -1; v = parent[v])
-		path.push_back(v);
-
-	reverse(path.begin(), path.end());
-	//for (int i : path) cout << i << ' ';
-	//cout << endl;
-	return path;
-}
-
-
-vector<int> Dijkstra(map<int, vector<pair<int, int>>>& graph, int src, int dest) {
-	map<int, int> dist, parent;
-	for (auto& [node, _] : graph) {
-		dist[node] = INT_MAX;
-		parent[node] = -1;
-	}
-
-	priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> pq;
-
-	dist[src] = 0;
-	pq.push({ 0, src });
-
-	while (!pq.empty()) {
-		auto [d, u] = pq.top();
-		pq.pop();
-
-		if (d > dist[u]) continue;
-		for (auto& [v, w] : graph[u]) {
-			if (dist[u] + w < dist[v]) {
-				dist[v] = dist[u] + w;
-				parent[v] = u;
-				pq.push({ dist[v], v });
-			}
-		}
-	}
-
-	if (dist[dest] == INT_MAX) return {};
-
-	vector<int> path;
-	for (int v = dest; v != -1; v = parent[v])
-		path.push_back(v);
-	reverse(path.begin(), path.end());
-	//for (int i : path) cout << i << ' ';
-	//cout << endl;
-	return path;
-}
-
-struct Node {
-	int id;
-	sf::CircleShape shape;
-};
-
 int main() {
-	sf::RenderWindow window(sf::VideoMode({ 1000, 700 }), "Network Visualizer");
-	window.setFramerateLimit(60);
+    sf::RenderWindow window(sf::VideoMode({ 1000, 700 }), "Network Visualizer");
+    window.setFramerateLimit(60);
 
-	map<int, vector<pair<int, int>>> graph;
-	map<int, Node> nodes;
-	vector<int> finalPath;
-	vector<int> bfsSelect, dijkstraSelect, connectedNodes;
-	bool bfsMode = false, dijkstraMode = false;
-	string weightInput = "";
-	bool weightMode = false;
-	int u = -1, v = -1;
+    Graph graph;
+    map<int, Node> nodes;
 
-	sf::Font font;
-	font.openFromFile("Sakire.ttf");
+    vector<int> finalPath;
+    vector<int> bfsSelect, dijkstraSelect, selected;
 
-	int nodeId = 0;
-	vector<int> selected;
+    bool bfsMode = false, dijkstraMode = false, weightMode = false;
 
-	while (window.isOpen()) {
-		while (const optional event = window.pollEvent()) {
-			if (event->is<sf::Event::Closed>()) {
-				window.close();
-			}
-			else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()) {
-				if (keyPressed->scancode == sf::Keyboard::Scancode::Escape) {
-					window.close();
-				}
-				if (keyPressed->scancode == sf::Keyboard::Scancode::C) {
-					graph.clear();
-					nodes.clear();
-					finalPath.clear();
-					nodeId = 0;
-				}
-				if (keyPressed->scancode == sf::Keyboard::Scancode::B) {
-					bfsMode = true;
-					dijkstraMode = false;
-					bfsSelect.clear();
-				}
-				if (keyPressed->scancode == sf::Keyboard::Scancode::D) {
-					dijkstraMode = true;
-					bfsMode = false;
-					dijkstraSelect.clear();
-				}
-				if (weightMode) {
-					if (keyPressed->scancode == sf::Keyboard::Scancode::Enter) {
-						int w = INT_MAX;
-						if(!weightInput.empty())
-							w = stoi(weightInput);
-						bool exists = false;
-						for (auto& p : graph[u]) {
-							if (p.first == v) {
-								exists = true;
-								break;
-							}
-						}
-						if (!exists) {
-							graph[u].push_back({ v, w });
-							graph[v].push_back({ u, w });
-						}
-						weightMode = false;
-					}
-					else if (keyPressed->scancode == sf::Keyboard::Scancode::Backspace) {
-						if (!weightInput.empty())
-							weightInput.pop_back();
-					}
-				}
-			}
-			else if (const auto* mouse = event->getIf<sf::Event::MouseButtonPressed>()) {
-				if (mouse->button == sf::Mouse::Button::Left) {
-					sf::Vector2f pos = window.mapPixelToCoords({ mouse->position.x, mouse->position.y });
+    string weightInput = "";
+    int u = -1, v = -1;
 
-					sf::CircleShape circle(20.f);
-					circle.setFillColor(sf::Color::Red);
-					circle.setOrigin({20.f, 20.f});
-					circle.setPosition(pos);
+    int nodeId = 0;
 
-					nodes[nodeId] = { nodeId, circle };
-					graph[nodeId] = {};
-					nodeId++;
-				}
+    sf::Font font;
+    if (!font.openFromFile("D:\\coding\\c++\\daaPBL\\daaPBL\\Sakire.ttf")) {
+        cout << "Font load failed\n";
+        return -1;
+    }
 
-				if (mouse->button == sf::Mouse::Button::Right) {
-					sf::Vector2f clickPos = window.mapPixelToCoords({ mouse->position.x, mouse->position.y });
-					finalPath.clear();
-					if (bfsMode) {
-						for (auto& [id, node] : nodes) {
-							if (node.shape.getGlobalBounds().contains(clickPos)) {
-								connectedNodes.push_back(id);
-								bfsSelect.push_back(id);
-								break;
-							}
-						}
+    while (window.isOpen()) {
+        while (const optional event = window.pollEvent()) {
+            if (event->is<sf::Event::Closed>())
+                window.close();
+            else if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                if (key->scancode == sf::Keyboard::Scancode::Escape)
+                    window.close();
 
-						if (bfsSelect.size() == 2) {
-							finalPath = BFS(bfsSelect[0], bfsSelect[1], graph);
-							bfsSelect.clear();
-							bfsMode = false;
-						}
-					}
-					else if (dijkstraMode) {
-						for (auto& [id, node] : nodes) {
-							if (node.shape.getGlobalBounds().contains(clickPos)) {
-								dijkstraSelect.push_back(id);
-								break;
-							}
-						}
+                if (key->scancode == sf::Keyboard::Scancode::C) {
+                    graph.adj.clear();
+                    nodes.clear();
+                    finalPath.clear();
+                    nodeId = 0;
+                }
 
-						if (dijkstraSelect.size() == 2) {
-							finalPath = Dijkstra(graph, dijkstraSelect[0], dijkstraSelect[1]);
-							dijkstraSelect.clear();
-							dijkstraMode = false;
-						}
-					}
-					else {
-						for (auto& [id, node] : nodes) {
-							if (node.shape.getGlobalBounds().contains(clickPos)) {
-								selected.push_back(id);
-								break;
-							}
-						}
-						if (selected.size() == 2) {
-							u = selected[0];
-							v = selected[1];
-							if (u != v) {
-								weightMode = true;
-								weightInput = "";
-							}
-							selected.clear();
-						}
-					}
-				}
-			}
-			else if (const auto& text = event->getIf<sf::Event::TextEntered>()) {
-				if (weightMode) {
-					if (isdigit(text->unicode))
-						weightInput += static_cast<char>(text->unicode);
-				}
-			}
-		}
+                if (key->scancode == sf::Keyboard::Scancode::B) {
+                    bfsMode = true;
+                    dijkstraMode = false;
+                    bfsSelect.clear();
+                }
 
-		window.clear(sf::Color::White);
+                if (key->scancode == sf::Keyboard::Scancode::D) {
+                    dijkstraMode = true;
+                    bfsMode = false;
+                    dijkstraSelect.clear();
+                }
 
-		set<pair<int, int>> drawn;
-		for (auto& [u, neighbors] : graph) {
-			for (auto& [v, w] : neighbors) {
-				if (drawn.count({ v, u })) continue;
+                if (weightMode) {
+                    if (key->scancode == sf::Keyboard::Scancode::Enter) {
+                        int w = weightInput.empty() ? 1 : stoi(weightInput);
+                        if (!graph.edgeExists(u, v)) {
+                            graph.addEdge(u, v, w);
+                        }
+                        weightMode = false;
+                    }
+                    else if (key->scancode == sf::Keyboard::Scancode::Backspace) {
+                        if (!weightInput.empty())
+                            weightInput.pop_back();
+                    }
+                }
+            }
+            else if (const auto* mouse = event->getIf<sf::Event::MouseButtonPressed>()) {
+                if (mouse->button == sf::Mouse::Button::Left) {
+                    sf::Vector2f pos = window.mapPixelToCoords(mouse->position);
 
-				auto pos1 = nodes[u].shape.getPosition();
-				auto pos2 = nodes[v].shape.getPosition();
+                    sf::CircleShape circle(20.f);
+                    circle.setFillColor(sf::Color::Red);
+                    circle.setOrigin({ 20.f, 20.f });
+                    circle.setPosition(pos);
 
-				sf::Vertex line[] = {
-					sf::Vertex(pos1),
-					sf::Vertex(pos2)
-				};
-				line[0].color = sf::Color::Black;
-				line[1].color = sf::Color::Black;
-				window.draw(line, 2, sf::PrimitiveType::Lines);
+                    nodes[nodeId] = { nodeId, circle };
+                    graph.addNode(nodeId);
 
-				sf::Vector2f mid(
-					(pos1.x + pos2.x) / 2.f,
-					(pos1.y + pos2.y) / 2.f
-				);
-				sf::Text weightText(font);
-				weightText.setString(to_string(w));
-				weightText.setCharacterSize(25);
-				weightText.setFillColor(sf::Color::Black);
-				weightText.setStyle(sf::Text::Bold);
+                    nodeId++;
+                }
 
-				sf::FloatRect bounds = weightText.getLocalBounds();
-				weightText.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
-				weightText.setPosition(mid);
-				window.draw(weightText);
-				drawn.insert({ u, v });
-			}
-		}
-		
-		for (int i = 0; i + 1 < finalPath.size(); i++) {
-			int u = finalPath[i];
-			int v = finalPath[i + 1];
+                if (mouse->button == sf::Mouse::Button::Right) {
+                    sf::Vector2f clickPos = window.mapPixelToCoords(mouse->position);
+                    finalPath.clear();
 
-			sf::Vertex line[] = {
-				sf::Vertex(nodes[u].shape.getPosition(), sf::Color::Blue),
-				sf::Vertex(nodes[v].shape.getPosition(), sf::Color::Blue)
-			};
-			line[0].color = sf::Color::Black;
-			line[1].color = sf::Color::Black;
-			window.draw(line, 2, sf::PrimitiveType::Lines);
-		}
+                    if (bfsMode) {
+                        for (auto& [id, node] : nodes) {
+                            if (node.shape.getGlobalBounds().contains(clickPos)) {
+                                bfsSelect.push_back(id);
+                                break;
+                            }
+                        }
 
-		for (auto& [id, node] : nodes) {
-			if (!graph[id].empty())
-				node.shape.setFillColor(sf::Color::Green);
-			else
-				node.shape.setFillColor(sf::Color::Red);
-		}
-		for (auto& [id, node] : nodes)
-			window.draw(node.shape);
+                        if (bfsSelect.size() == 2) {
+                            finalPath = BFS(bfsSelect[0], bfsSelect[1], graph.adj);
+                            bfsSelect.clear();
+                            bfsMode = false;
+                        }
+                    }
+                    else if (dijkstraMode) {
+                        for (auto& [id, node] : nodes) {
+                            if (node.shape.getGlobalBounds().contains(clickPos)) {
+                                dijkstraSelect.push_back(id);
+                                break;
+                            }
+                        }
 
-		for (auto& [id, node] : nodes) {
-			sf::Text txt(font);
-			txt.setString(to_string(id));
-			txt.setCharacterSize(20);
-			txt.setFillColor(sf::Color::Black);
-			
-			sf::FloatRect bounds = txt.getLocalBounds();
-			txt.setOrigin({ bounds.size.x / 2.f, bounds.size.y / 2.f });
+                        if (dijkstraSelect.size() == 2) {
+                            finalPath = Dijkstra(dijkstraSelect[0], dijkstraSelect[1], graph.adj);
+                            dijkstraSelect.clear();
+                            dijkstraMode = false;
+                        }
+                    }
+                    else {
+                        for (auto& [id, node] : nodes) {
+                            if (node.shape.getGlobalBounds().contains(clickPos)) {
+                                selected.push_back(id);
+                                break;
+                            }
+                        }
 
-			txt.setPosition({node.shape.getPosition().x, node.shape.getPosition().y-5.f});
+                        if (selected.size() == 2) {
+                            u = selected[0];
+                            v = selected[1];
+                            if (u != v) {
+                                weightMode = true;
+                                weightInput = "";
+                            }
+                            selected.clear();
+                        }
+                    }
+                }
+            }
 
-			window.draw(txt);
-		}
+            else if (const auto* text = event->getIf<sf::Event::TextEntered>()) {
+                if (weightMode) {
+                    if (isdigit(text->unicode))
+                        weightInput += static_cast<char>(text->unicode);
+                }
+            }
+        }
 
-		if (weightMode) {
-			sf::Text txt(font);
-			txt.setString("Weight: " + weightInput);
-			txt.setCharacterSize(20);
-			txt.setFillColor(sf::Color::Black);
-			txt.setPosition({ 20.f, 20.f });
+        window.clear(sf::Color::White);
 
-			window.draw(txt);
-		}
+        drawEdges(window, nodes, graph.adj, font);
+        drawPath(window, nodes, finalPath);
+        drawNodes(window, nodes, graph.adj, font);
 
-		window.display();
-	}
-		
-	return 0;
+        if (weightMode) {
+            sf::Text txt(font);
+            txt.setString("Weight: " + weightInput);
+            txt.setCharacterSize(20);
+            txt.setFillColor(sf::Color::Black);
+            txt.setPosition({ 20.f, 20.f });
+            window.draw(txt);
+        }
+
+        window.display();
+    }
+
+    return 0;
 }
