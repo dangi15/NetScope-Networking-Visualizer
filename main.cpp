@@ -101,7 +101,7 @@ int main() {
 	map<int, vector<pair<int, int>>> graph;
 	map<int, Node> nodes;
 	vector<int> finalPath;
-	vector<int> bfsSelect, dijkstraSelect;
+	vector<int> bfsSelect, dijkstraSelect, connectedNodes;
 	bool bfsMode = false, dijkstraMode = false;
 	string weightInput = "";
 	bool weightMode = false;
@@ -182,8 +182,8 @@ int main() {
 					if (bfsMode) {
 						for (auto& [id, node] : nodes) {
 							if (node.shape.getGlobalBounds().contains(clickPos)) {
+								connectedNodes.push_back(id);
 								bfsSelect.push_back(id);
-								node.shape.setFillColor(sf::Color::Green);
 								break;
 							}
 						}
@@ -235,18 +235,38 @@ int main() {
 			}
 		}
 
-		window.clear();
+		window.clear(sf::Color::White);
 
 		set<pair<int, int>> drawn;
 		for (auto& [u, neighbors] : graph) {
 			for (auto& [v, w] : neighbors) {
 				if (drawn.count({ v, u })) continue;
 
+				auto pos1 = nodes[u].shape.getPosition();
+				auto pos2 = nodes[v].shape.getPosition();
+
 				sf::Vertex line[] = {
-					sf::Vertex(nodes[u].shape.getPosition()),
-					sf::Vertex(nodes[v].shape.getPosition())
+					sf::Vertex(pos1),
+					sf::Vertex(pos2)
 				};
+				line[0].color = sf::Color::Black;
+				line[1].color = sf::Color::Black;
 				window.draw(line, 2, sf::PrimitiveType::Lines);
+
+				sf::Vector2f mid(
+					(pos1.x + pos2.x) / 2.f,
+					(pos1.y + pos2.y) / 2.f
+				);
+				sf::Text weightText(font);
+				weightText.setString(to_string(w));
+				weightText.setCharacterSize(25);
+				weightText.setFillColor(sf::Color::Black);
+				weightText.setStyle(sf::Text::Bold);
+
+				sf::FloatRect bounds = weightText.getLocalBounds();
+				weightText.setOrigin({bounds.size.x / 2.f, bounds.size.y / 2.f});
+				weightText.setPosition(mid);
+				window.draw(weightText);
 				drawn.insert({ u, v });
 			}
 		}
@@ -259,19 +279,39 @@ int main() {
 				sf::Vertex(nodes[u].shape.getPosition(), sf::Color::Blue),
 				sf::Vertex(nodes[v].shape.getPosition(), sf::Color::Blue)
 			};
+			line[0].color = sf::Color::Black;
+			line[1].color = sf::Color::Black;
 			window.draw(line, 2, sf::PrimitiveType::Lines);
 		}
 
+		for (auto& [id, node] : nodes) {
+			if (!graph[id].empty())
+				node.shape.setFillColor(sf::Color::Green);
+			else
+				node.shape.setFillColor(sf::Color::Red);
+		}
 		for (auto& [id, node] : nodes)
 			window.draw(node.shape);
 
+		for (auto& [id, node] : nodes) {
+			sf::Text txt(font);
+			txt.setString(to_string(id));
+			txt.setCharacterSize(20);
+			txt.setFillColor(sf::Color::Black);
+			
+			sf::FloatRect bounds = txt.getLocalBounds();
+			txt.setOrigin({ bounds.size.x / 2.f, bounds.size.y / 2.f });
+
+			txt.setPosition({node.shape.getPosition().x, node.shape.getPosition().y-5.f});
+
+			window.draw(txt);
+		}
+
 		if (weightMode) {
-
-
 			sf::Text txt(font);
 			txt.setString("Weight: " + weightInput);
 			txt.setCharacterSize(20);
-			txt.setFillColor(sf::Color::White);
+			txt.setFillColor(sf::Color::Black);
 			txt.setPosition({ 20.f, 20.f });
 
 			window.draw(txt);
