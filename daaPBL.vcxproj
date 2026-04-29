@@ -139,7 +139,9 @@
   <ItemGroup>
     <ClInclude Include="algorithms.h" />
     <ClInclude Include="graph.h" />
+    <ClInclude Include="link.h" />
     <ClInclude Include="node.h" />
+    <ClInclude Include="packet_anim.h" />
     <ClInclude Include="renderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

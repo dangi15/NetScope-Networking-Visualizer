@@ -41,5 +41,11 @@
     <ClInclude Include="renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="link.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="packet_anim.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
